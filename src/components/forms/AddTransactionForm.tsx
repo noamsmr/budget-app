@@ -122,7 +122,13 @@ export function AddTransactionForm() {
         <Label>Category</Label>
         <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "none")}>
           <SelectTrigger>
-            <SelectValue placeholder="Select category" />
+            <SelectValue>
+              {(value: string | null) =>
+                !value || value === "none"
+                  ? "No category"
+                  : (categories?.find((c) => c.id === value)?.name ?? "Select category")
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">No category</SelectItem>
@@ -201,7 +207,11 @@ export function AddTransactionForm() {
               onValueChange={(v) => v && setRecurrenceRule(v as RecurrenceRule)}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>
+                  {(value: string | null) =>
+                    RECURRENCE_RULES.find((r) => r.value === value)?.label ?? value
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {RECURRENCE_RULES.map((r) => (

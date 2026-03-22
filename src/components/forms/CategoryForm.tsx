@@ -82,7 +82,13 @@ export function CategoryForm() {
         <Label>Group (optional)</Label>
         <Select value={groupId} onValueChange={(v) => setGroupId(v ?? "none")}>
           <SelectTrigger>
-            <SelectValue placeholder="No group" />
+            <SelectValue>
+              {(value: string | null) =>
+                !value || value === "none"
+                  ? "No group"
+                  : (groups?.find((g) => g.id === value)?.name ?? value)
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">No group</SelectItem>
