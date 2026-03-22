@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google"
 // Edge-compatible auth config (no Prisma adapter — used in middleware)
 export const authConfig: NextAuthConfig = {
   providers: [Google],
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
   },
