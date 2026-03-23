@@ -12,6 +12,7 @@ export interface Category {
   id: string
   name: string
   color: string | null
+  type: TransactionType
   groupId: string | null
   group?: Group | null
   createdAt: string

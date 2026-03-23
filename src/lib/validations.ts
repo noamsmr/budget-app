@@ -4,7 +4,7 @@ export const transactionSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
   amount: z.number().positive(),
   description: z.string().min(1, "Description is required"),
-  categoryId: z.string().optional().nullable(),
+  categoryId: z.string().min(1, "Category is required"),
   date: z.string().min(1),
   isRecurring: z.boolean().default(false),
   recurrenceRule: z
@@ -16,13 +16,13 @@ export const transactionSchema = z.object({
 
 export const categorySchema = z.object({
   name: z.string().min(1, "Name is required"),
-  color: z.string().optional().nullable(),
+  color: z.string().min(1, "Color is required"),
+  type: z.enum(["INCOME", "EXPENSE"]),
   groupId: z.string().optional().nullable(),
 })
 
 export const groupSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  color: z.string().optional().nullable(),
 })
 
 export type TransactionInput = z.infer<typeof transactionSchema>

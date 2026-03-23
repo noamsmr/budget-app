@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,9 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
+import { cn, CATEGORY_COLORS } from "@/lib/utils"
 import { useCreateTransaction } from "@/hooks/useTransactions"
-import { useCategories } from "@/hooks/useCategories"
+import { useCategories, useCreateCategory } from "@/hooks/useCategories"
+import { useGroups } from "@/hooks/useGroups"
 import type { TransactionType, RecurrenceRule } from "@/types"
 
 const RECURRENCE_RULES: { value: RecurrenceRule; label: string }[] = [
@@ -28,31 +29,44 @@ const RECURRENCE_RULES: { value: RecurrenceRule; label: string }[] = [
   { value: "YEARLY", label: "Yearly" },
 ]
 
+function randomColor() {
+  return CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)]
+}
+
 export function AddTransactionForm() {
   const router = useRouter()
   const { data: categories } = useCategories()
+  const { data: groups } = useGroups()
   const createM = useCreateTransaction()
+  const createCatM = useCreateCategory()
 
   const [type, setType] = useState<TransactionType>("EXPENSE")
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
-  const [categoryId, setCategoryId] = useState<string>("none")
+  const [categoryId, setCategoryId] = useState<string>("")
   const [date, setDate] = useState<Date>(new Date())
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>("MONTHLY")
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("")
   const [datePickerOpen, setDatePickerOpen] = useState(false)
 
+  // Inline new category state
+  const [showNewCat, setShowNewCat] = useState(false)
+  const [newCatName, setNewCatName] = useState("")
+  const [newCatColor, setNewCatColor] = useState(randomColor)
+  const [newCatGroupId, setNewCatGroupId] = useState<string>("none")
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const numAmount = parseFloat(amount)
     if (!numAmount || numAmount <= 0) return
+    if (!categoryId) return
 
     await createM.mutateAsync({
       type,
       amount: numAmount,
       description,
-      categoryId: categoryId === "none" ? null : categoryId,
+      categoryId,
       date: date.toISOString(),
       isRecurring,
       recurrenceRule: isRecurring ? recurrenceRule : null,
@@ -60,6 +74,22 @@ export function AddTransactionForm() {
     } as Parameters<typeof createM.mutateAsync>[0])
 
     router.back()
+  }
+
+  async function handleCreateCategory(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newCatName.trim()) return
+    const cat = await createCatM.mutateAsync({
+      name: newCatName.trim(),
+      color: newCatColor,
+      type,
+      groupId: newCatGroupId === "none" ? null : newCatGroupId,
+    })
+    setCategoryId(cat.id)
+    setNewCatName("")
+    setNewCatColor(randomColor())
+    setNewCatGroupId("none")
+    setShowNewCat(false)
   }
 
   return (
@@ -70,7 +100,7 @@ export function AddTransactionForm() {
           <button
             key={t}
             type="button"
-            onClick={() => setType(t)}
+            onClick={() => { setType(t); setCategoryId("") }}
             className={cn(
               "flex-1 py-2 text-sm font-medium rounded-md transition-colors",
               type === t
@@ -89,7 +119,7 @@ export function AddTransactionForm() {
       <div className="space-y-1.5">
         <Label htmlFor="amount">Amount</Label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₪</span>
           <Input
             id="amount"
             type="number"
@@ -120,31 +150,123 @@ export function AddTransactionForm() {
       {/* Category */}
       <div className="space-y-1.5">
         <Label>Category</Label>
-        <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "none")}>
+        <Select
+          value={categoryId}
+          onValueChange={(v) => {
+            if (v === "__new__") {
+              setShowNewCat(true)
+            } else {
+              setCategoryId(v)
+              setShowNewCat(false)
+            }
+          }}
+        >
           <SelectTrigger>
             <SelectValue>
-              {(value: string | null) =>
-                !value || value === "none"
-                  ? "No category"
-                  : (categories?.find((c) => c.id === value)?.name ?? "Select category")
-              }
+              {(value: string | null) => {
+                if (!value || value === "__new__") return "Select category"
+                const cat = categories?.find((c) => c.id === value)
+                if (!cat) return "Select category"
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color ?? "#6b7280" }} />
+                    {cat.name}
+                  </div>
+                )
+              }}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">No category</SelectItem>
-            {categories?.map((cat) => (
+            {categories?.filter((c) => c.type === type).map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 <div className="flex items-center gap-2">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: cat.color ?? "#6b7280" }}
-                  />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color ?? "#6b7280" }} />
                   {cat.name}
                 </div>
               </SelectItem>
             ))}
+            <SelectItem value="__new__">
+              <div className="flex items-center gap-2 text-primary">
+                <Plus size={12} />
+                New category
+              </div>
+            </SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Inline new category form */}
+        {showNewCat && (
+          <div className="flex flex-col gap-3 p-3 bg-muted/50 rounded-lg border border-border mt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="newCatName">Name</Label>
+              <Input
+                id="newCatName"
+                placeholder="e.g. Groceries"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Color</Label>
+              <div className="flex gap-2 flex-wrap">
+                {CATEGORY_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setNewCatColor(c)}
+                    className="w-6 h-6 rounded-full transition-transform hover:scale-110"
+                    style={{
+                      backgroundColor: c,
+                      outline: newCatColor === c ? `2px solid ${c}` : "none",
+                      outlineOffset: "2px",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Group (optional)</Label>
+              <Select value={newCatGroupId} onValueChange={(v) => setNewCatGroupId(v ?? "none")}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {(value: string | null) =>
+                      !value || value === "none"
+                        ? "No group"
+                        : (groups?.find((g) => g.id === value)?.name ?? value)
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No group</SelectItem>
+                  {groups?.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNewCat(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={createCatM.isPending || !newCatName.trim()}
+                onClick={handleCreateCategory}
+              >
+                {createCatM.isPending ? "Saving..." : "Create"}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Date */}
@@ -235,7 +357,7 @@ export function AddTransactionForm() {
         </div>
       )}
 
-      <Button type="submit" className="mt-2" disabled={createM.isPending}>
+      <Button type="submit" className="mt-2" disabled={createM.isPending || !categoryId}>
         {createM.isPending ? "Saving..." : `Add ${type === "INCOME" ? "Income" : "Expense"}`}
       </Button>
     </form>

@@ -20,7 +20,7 @@ export async function PUT(
 
   const group = await db.group.update({
     where: { id },
-    data: { name: parsed.data.name, color: parsed.data.color ?? null },
+    data: { name: parsed.data.name },
   })
 
   return NextResponse.json({ ...group, createdAt: group.createdAt.toISOString() })

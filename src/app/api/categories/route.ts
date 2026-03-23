@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
       name: data.name,
       color: data.color ?? null,
+      type: data.type,
       groupId: data.groupId ?? null,
     },
     include: { group: true },

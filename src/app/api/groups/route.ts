@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
     data: {
       userId: session.user.id,
       name: parsed.data.name,
-      color: parsed.data.color ?? null,
     },
   })
 

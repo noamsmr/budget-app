@@ -12,17 +12,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { cn, CATEGORY_COLORS } from "@/lib/utils"
 import { useCreateCategory } from "@/hooks/useCategories"
 import { useGroups } from "@/hooks/useGroups"
-import { CATEGORY_COLORS } from "@/lib/utils"
+import type { TransactionType } from "@/types"
 
-export function CategoryForm() {
+interface CategoryFormProps {
+  lockedType?: TransactionType
+}
+
+export function CategoryForm({ lockedType }: CategoryFormProps) {
   const createM = useCreateCategory()
   const { data: groups } = useGroups()
   const [name, setName] = useState("")
-  const [color, setColor] = useState(CATEGORY_COLORS[0])
+  const [color, setColor] = useState(() => CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)])
+  const [type, setType] = useState<TransactionType>(lockedType ?? "EXPENSE")
   const [groupId, setGroupId] = useState<string>("none")
   const [open, setOpen] = useState(false)
+
+  function randomColor() {
+    return CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)]
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -30,9 +40,12 @@ export function CategoryForm() {
     await createM.mutateAsync({
       name: name.trim(),
       color,
+      type,
       groupId: groupId === "none" ? null : groupId,
     })
     setName("")
+    setColor(randomColor())
+    if (!lockedType) setType("EXPENSE")
     setOpen(false)
   }
 
@@ -47,6 +60,28 @@ export function CategoryForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-4 bg-card rounded-xl border border-border">
+      {!lockedType && (
+        <div className="flex rounded-lg bg-muted p-1 gap-1">
+          {(["EXPENSE", "INCOME"] as TransactionType[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setType(t)}
+              className={cn(
+                "flex-1 py-1.5 text-xs font-medium rounded-md transition-colors",
+                type === t
+                  ? t === "INCOME"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t === "INCOME" ? "Income" : "Expense"}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <Label htmlFor="catName">Name</Label>
         <Input

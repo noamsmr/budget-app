@@ -44,10 +44,6 @@ export default function GroupsPage() {
                 key={group.id}
                 className="flex items-center gap-3 py-3 px-4 bg-card rounded-xl border border-border/50"
               >
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: group.color ?? "#6b7280" }}
-                />
                 <span className="flex-1 text-sm font-medium">{group.name}</span>
                 <AlertDialog>
                   <AlertDialogTrigger

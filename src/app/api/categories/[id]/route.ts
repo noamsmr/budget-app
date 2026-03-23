@@ -21,7 +21,7 @@ export async function PUT(
   const data = parsed.data
   const category = await db.category.update({
     where: { id },
-    data: { name: data.name, color: data.color ?? null, groupId: data.groupId ?? null },
+    data: { name: data.name, color: data.color ?? null, type: data.type, groupId: data.groupId ?? null },
     include: { group: true },
   })
 
